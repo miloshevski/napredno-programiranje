@@ -1,4 +1,4 @@
-package lock;
+package av2.lock;
 
 public class CombinationLock {
 

@@ -1,4 +1,4 @@
-package date;
+package av2.date;
 
 import java.util.Objects;
 
@@ -16,7 +16,7 @@ public class Date implements Comparable<Date> {
 
     /**
      * A static block is used to initialize static properties and is executed when the class is
-     * loaded in memory. In this case, since we need a more complex logic to initialize the daysTillFirstOfMonth
+     * loaded in memory. In this case, since we need a more av2.complex logic to initialize the daysTillFirstOfMonth
      * and daysTillFirstOfYear arrays we use this block.
      */
     static {

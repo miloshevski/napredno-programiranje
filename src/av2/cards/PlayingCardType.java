@@ -1,4 +1,4 @@
-package cards;
+package av2.cards;
 
 public enum PlayingCardType {
     HEARTS,
