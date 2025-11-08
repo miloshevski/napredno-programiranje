@@ -1,5 +1,4 @@
 package k1.aplikant;
-
 import java.util.Scanner;
 
 /**
@@ -83,13 +82,51 @@ interface Evaluator {
     boolean evaluate(Applicant applicant);
 }
 
-class EvaluatorBuilder {
-    public static Evaluator build(Evaluator.TYPE type) throws InvalidEvaluation {
-
-        // вашиот код овде
-
+class InvalidEvaluation extends Exception{
+    public InvalidEvaluation(String message) {
+        super(message);
     }
 }
+
+class BiEvaluator implements Evaluator{
+    private final Evaluator a;
+    private final Evaluator b;
+
+    public BiEvaluator(Evaluator a, Evaluator b){
+        this.a = a;
+        this.b = b;
+    }
+
+    @Override
+    public boolean evaluate(Applicant applicant) {
+        return a.evaluate(applicant) && b.evaluate(applicant);
+    }
+}
+
+class EvaluatorBuilder{
+    public static Evaluator build(Evaluator.TYPE type) throws InvalidEvaluation {
+        switch (type){
+            case NO_CRIMINAL_RECORD:
+                return hasNoCriminalRecord;
+            case MORE_EXPERIENCE:
+                return hasMoreExperience;
+            case MORE_CREDIT_SCORE:
+                return hasMoreCreditScore;
+            case NO_CRIMINAL_RECORD_AND_MORE_CREDIT_SCORE:
+                return new BiEvaluator(hasNoCriminalRecord,hasMoreCreditScore);
+            case MORE_EXPERIENCE_AND_MORE_CREDIT_SCORE:
+                return new BiEvaluator(hasMoreExperience,hasMoreCreditScore);
+            case NO_CRIMINAL_RECORD_AND_MORE_EXPERIENCE:
+                return new BiEvaluator(hasNoCriminalRecord,hasMoreExperience);
+            default:
+                throw new InvalidEvaluation("Invalid");
+        }
+    }
+
+    private static final Evaluator hasNoCriminalRecord = x -> !x.hasCriminalRecord();
+    private static final Evaluator hasMoreExperience = x -> x.getEmploymentYears() >= 10;
+    private static final Evaluator hasMoreCreditScore = x -> x.getCreditScore() >= 500;
+ }
 
 
 // имплементација на евалуатори овде
