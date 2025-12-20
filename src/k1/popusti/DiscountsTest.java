@@ -1,161 +1,119 @@
 package k1.popusti;
 
-import java.io.BufferedReader;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Scanner;
 import java.util.stream.Collectors;
 
-class Product implements Comparable<Product> {
-    private final int discountedPrice;
-    private final int price;
+class Product{
+    private int cena;
+    private int cenapopust;
 
-    public Product(int discountedPrice, int price) {
-        this.discountedPrice = discountedPrice;
-        this.price = price;
+    public Product(int cenapopust, int cena) {
+        this.cena = cena;
+        this.cenapopust = cenapopust;
+    }
+
+    public int getCena() {
+        return cena;
+    }
+
+    public int getCenapopust() {
+        return cenapopust;
+    }
+    public int getPopust(){
+        return cena - cenapopust;
+    }
+    public int getProcent(){
+        double diff = cena - cenapopust;
+        diff = (diff*100) / cena;
+        return (int)diff;
     }
 
     @Override
     public String toString() {
-        return String.format("%2d%% %d/%d", getDiscountRelative(), getDiscountedPrice(), getPrice());
-    }
-
-    @Override
-    public int compareTo(Product o) {
-        return Comparator
-                .comparing(Product::getDiscountRelative)
-                .thenComparing(Product::getDiscountAbsolute)
-                .reversed()
-                .compare(this, o);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Product product = (Product) o;
-        return discountedPrice == product.discountedPrice && price == product.price;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(discountedPrice, price);
-    }
-
-    public int getDiscountRelative() {
-        return 100 - (discountedPrice * 100 / price);
-    }
-
-    public int getDiscountAbsolute() {
-        return price - discountedPrice;
-    }
-
-    public int getDiscountedPrice() {
-        return discountedPrice;
-    }
-
-    public int getPrice() {
-        return price;
+        return String.format("%2d%% %d/%d",getProcent(),getCenapopust(),getCena());
     }
 }
+class Discounts{
+    List<Store> list;
+    public Discounts(){
+        list = new ArrayList<>();
+    }
 
-class Store {
-    private final String name;
-    private final List<Product> products;
+    public int readStores(InputStream inputStream){
+        int c = 0;
+        Scanner sc = new Scanner(inputStream);
+        while (sc.hasNextLine()){
+            String[] line = sc.nextLine().split("\\s+");
+            String name = line[0];
+            Store store = new Store(name);
+            for(int i=1;i<line.length;i++){
+                int popust = Integer.parseInt(line[i].split(":")[0]);
+                int cena = Integer.parseInt(line[i].split(":")[1]);
+                Product p = new Product(popust,cena);
+                store.addProduct(p);
+            }
+            list.add(store);
+            c++;
+        }
+        return c;
+    }
 
-    public Store(String name, List<Product> products) {
+    public List<Store> byAverageDiscount(){
+        return list.stream().sorted(Comparator.comparing(Store::averageDiscount).thenComparing(Store::getName).reversed()).limit(3).collect(Collectors.toList());
+    }
+    public List<Store> byTotalDiscount(){
+        return list.stream().sorted(Comparator.comparing(Store::sumDis).thenComparing(Store::getName)).limit(3).collect(Collectors.toList());
+    }
+}
+class Store{
+    private String name;
+    private List<Product> list;
+
+    public Store(String name) {
         this.name = name;
-        this.products = products;
+        list = new ArrayList<>();
+    }
+    public void addProduct(Product p){
+        list.add(p);
+    }
+    public double averageDiscount(){
+        return list.stream().mapToDouble(Product::getProcent).average().orElse(0.0);
     }
 
-    @Override
-    public String toString() {
-        return String.format("%s%nAverage discount: %.1f%%%nTotal discount: %d%n%s",
-                name,
-                getAverageDiscount(),
-                getTotalDiscount(),
-                products
-                        .stream()
-                        .sorted()
-                        .map(Product::toString)
-                        .collect(Collectors.joining("\n")));
-    }
-
-    public double getAverageDiscount() {
-        return products
-                .stream()
-                .mapToDouble(Product::getDiscountRelative)
-                .average()
-                .orElse(0);
-    }
-
-    public int getTotalDiscount() {
-        return products
-                .stream()
-                .mapToInt(Product::getDiscountAbsolute)
-                .sum();
+    public int sumDis(){
+        int cena = list.stream().mapToInt(Product::getCena).sum();
+        int popust = list.stream().mapToInt(Product::getCenapopust).sum();
+        return cena - popust;
     }
 
     public String getName() {
         return name;
     }
-}
 
-class Discounts {
-    private final List<Store> stores;
-
-    public Discounts() {
-        this.stores = new ArrayList<>();
-    }
-
-    public int readStores(InputStream in) {
-        BufferedReader br = new BufferedReader(new InputStreamReader(in));
-
-        br.lines().forEach(line -> {
-            String[] tokens = line.split("\\s+");
-            List<Product> products = new ArrayList<>();
-
-            for (int i = 1; i < tokens.length; i++) {
-                String[] prices = tokens[i].split(":");
-                products.add(new Product(Integer.parseInt(prices[0]), Integer.parseInt(prices[1])));
-            }
-
-            stores.add(new Store(tokens[0], products));
-        });
-
-        return stores.size();
-    }
-
-    public List<Store> byAverageDiscount() {
-        return stores
-                .stream()
-                .sorted(Comparator
-                        .comparing(Store::getAverageDiscount)
-                        .reversed()
-                        .thenComparing(Store::getName))
-                .limit(3)
-                .collect(Collectors.toList());
-    }
-
-    public List<Store> byTotalDiscount() {
-        return stores
-                .stream()
-                .sorted(Comparator
-                        .comparing(Store::getTotalDiscount)
-                        .thenComparing(Store::getName))
-                .limit(3)
-                .collect(Collectors.toList());
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(name).append("\n");
+        sb.append(String.format("Average discount: %.1f%%\n",averageDiscount()));
+        sb.append(String.format("Total discount: %d\n",sumDis()));
+        list.stream().sorted(Comparator.comparing(Product::getProcent).thenComparing(Product::getCenapopust).reversed()).forEach(p -> sb.append(p).append("\n"));
+        return sb.toString();
     }
 }
+
 public class DiscountsTest {
     public static void main(String[] args) {
         Discounts discounts = new Discounts();
         int stores = discounts.readStores(System.in);
         System.out.println("Stores read: " + stores);
         System.out.println("=== By average discount ===");
-        discounts.byAverageDiscount().forEach(System.out::println);
+        discounts.byAverageDiscount().forEach(System.out::print);
         System.out.println("=== By total discount ===");
-        discounts.byTotalDiscount().forEach(System.out::println);
+        discounts.byTotalDiscount().forEach(System.out::print);
     }
 }
 

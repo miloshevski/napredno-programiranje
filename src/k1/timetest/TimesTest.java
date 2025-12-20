@@ -1,93 +1,90 @@
 package k1.timetest;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.sql.Time;
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.io.*;
+import java.util.Collections;
 import java.util.List;
+import java.util.PrimitiveIterator;
 import java.util.Scanner;
 
 class TimeTable{
-    private final List<String> list;
-
-    public TimeTable(){
-        this.list = new ArrayList<>();
-    }
+    List<Time> times;
 
     public void readTimes(InputStream inputStream) throws UnsupportedFormatException, InvalidTimeException {
         Scanner sc = new Scanner(inputStream);
-        String[] split;
-
-        while(sc.hasNextLine()){
-            split=sc.nextLine().split("\\s+");
-
-            for(String s : split){
-                if(!isValidFormat(s)){
-                    throw new UnsupportedFormatException(s);
-                }
-                if(!isValidTime(s)){
-                    throw new InvalidTimeException(s);
-                }
-                list.add(s);
+        String[] line = sc.nextLine().split("\\s+");
+        for(String s : line){
+            if(!checkFormat(s)){
+                throw new UnsupportedFormatException(s);
             }
+            int h = Integer.parseInt(s.split("[.:]")[0]);
+            int m = Integer.parseInt(s.split("[.:]")[1]);
+
+            if(!checkTime(h,m)){
+                throw new InvalidTimeException(s);
+            }
+            times.add(new Time(h,m));
         }
     }
     public void writeTimes(OutputStream outputStream, TimeFormat format){
-        PrintWriter pw = new PrintWriter(outputStream);
-
-        if(format == TimeFormat.FORMAT_24){
-            list.stream().sorted(Comparator.comparing(TimeTable::getTime)).forEach(i -> pw.printf("%5s%n",i));
-        }else{
-            list.stream().sorted(Comparator.comparing(TimeTable::getTime)).forEach(i -> pw.printf("%8s%n",toAMPM(i)));
+        PrintWriter writer = new PrintWriter(outputStream);
+        Collections.sort(times);
+        for(Time t : times){
+            if(format == TimeFormat.FORMAT_24){
+                writer.println(t);
+            }else{
+                writer.println(t.toStringAMPM());
+            }
         }
     }
-    public static String toAMPM(String s){
-        if(s.matches("0:[0-5][0-9]")){
-            return s.replace("0:","12") + " AM";
-        }else if(s.matches("([1-9]|1[01]):[0-5][0-9]")){
-            return s + " AM";
-        }else if(s.matches("12:[0-5][0-9]")){
-            return s + " PM";
-        }else{
-            return String.format("%d:%s PM", Integer.parseInt(s.substring(0, 2)) - 12, s.substring(3, 5));
-        }
+    private boolean checkFormat(String s){
+        return s.matches("[0-9.:]");
     }
-    private boolean isValidFormat(String str) {
-        return str.matches("\\d+[:.]\\d+");
-    }
-    private boolean isValidTime(String str){
-        return str.matches("([0-9]|1[0-9]|2[0-3])[:.][0-5][0-9]");
-    }
-    public static int getTime(String str){
-        return Integer.parseInt(str.split(":")[0]) * 60 + Integer.parseInt(str.split(":")[1]);
+    private boolean checkTime(int h,int m){
+        return h >= 0 && h <= 23 && m >= 0 && m <=59;
     }
 }
-class UnsupportedFormatException extends Exception{
-    String s;
-    public UnsupportedFormatException(String s){
-        this.s = s;
+
+class Time implements Comparable<Time>{
+    int hour;
+    int minute;
+
+    public Time(int hour, int minute) {
+        this.hour = hour;
+        this.minute = minute;
+    }
+
+    public Time(String s){
+        String [] line = s.split("[.:]");
+        this.hour = Integer.parseInt(line[0]);
+        this.minute = Integer.parseInt(line[1]);
     }
 
     @Override
-    public String getMessage() {
-        return String.format("%s has unsupported format",s);
+    public int compareTo(Time o) {
+        if (hour == o.hour)
+            return minute - o.minute;
+        else
+            return hour - o.hour;
     }
-}
-
-class InvalidTimeException extends Exception{
-    String t;
-
-    public InvalidTimeException(String t) {
-        this.t = t;
-    }
-
     @Override
-    public String getMessage() {
-        return String.format("%s is invalid time");
+    public String toString() {
+        return String.format("%2d:%02d", hour, minute);
+    }
+    public String toStringAMPM() {
+        String part = "AM";
+        int h = hour;
+        if (h == 0) {
+            h += 12;
+        } else if (h == 12) {
+            part = "PM";
+        } else if (h > 12) {
+            h -= 12;
+            part = "PM";
+        }
+        return String.format("%2d:%02d %s", h, minute, part);
     }
 }
+
 public class TimesTest {
 
     public static void main(String[] args) {
@@ -109,4 +106,15 @@ public class TimesTest {
 
 enum TimeFormat {
     FORMAT_24, FORMAT_AMPM
+}
+class UnsupportedFormatException extends Exception {
+    public UnsupportedFormatException(String msg) {
+        super(msg);
+    }
+}
+
+class InvalidTimeException extends Exception {
+    public InvalidTimeException(String msg) {
+        super(msg);
+    }
 }

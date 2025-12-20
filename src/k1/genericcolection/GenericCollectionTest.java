@@ -1,58 +1,51 @@
 package k1.genericcolection;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
 
 class GenericCollection<T extends Comparable<T> & IHasTimestamp>{
-    private final Map<String, List<T>> map = new HashMap<>();
-
-    public void addGenericItem(String category, T element){
-        map.computeIfAbsent(category, k -> new ArrayList<>()).add(element);
+    private Map<String,Set<T>> map;
+    public GenericCollection(){
+        map = new HashMap<>();
     }
-
-    public Collection<T> findAllBetween(LocalDateTime from, LocalDateTime to){
-        return allStream().filter(e -> {
-            LocalDateTime ts = e.getTimestamp();
-            return (ts.isAfter(from) || ts.isEqual(from)) && (ts.isBefore(to) || ts.isEqual(to));
-        }).sorted(Comparator.reverseOrder())
-                .collect(Collectors.toList());
+    void addGenericItem(String category, T element){
+        map.computeIfAbsent(category, k -> new HashSet<>()).add(element);
     }
+    public Collection<T> findAllBetween (LocalDateTime from, LocalDateTime to){
+        return map.values().stream()
+                .flatMap(Collection::stream)
+                .filter(t -> t.getTimestamp().isAfter(from) && t.getTimestamp().isBefore(to))
+                .collect(Collectors.toCollection(() -> new TreeSet<T>(Comparator.reverseOrder())));
 
-    Collection<T> itemsFromCategories(List<String> categories){
-        Set<String> wanted = new HashSet<>(categories);
-
-        return map.entrySet().stream()
-                .filter(e -> wanted.contains(e.getKey()))
-                .flatMap(e -> e.getValue().stream())
-                .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toList());
     }
-
-    public Map<String,Set<T>> byMonthAndDay(){
-        Map<String,Set<T>> res = new TreeMap<>();
-        allStream().forEach(e -> {
-            String key = String.format("%02d-%02d",e.getTimestamp().getDayOfMonth(), e.getTimestamp().getDayOfMonth());
-            res.computeIfAbsent(key, k -> new TreeSet<>(Comparator.reverseOrder())).add(e);
-        });
-        return res;
+    public Collection<T> itemsFromCategories (List<String> categories){
+        return map.keySet().stream()
+                .filter(categories::contains)
+                .flatMap(i -> map.get(i).stream())
+                .collect(Collectors.toCollection(() -> new TreeSet<T>(Comparator.reverseOrder())));
     }
-
+    public Map<String, Set<T>> byMonthAndDay(){
+        return map.values().stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.groupingBy(
+                        element -> String.format("%02d-%02d",element.getTimestamp().getMonthValue(),element.getTimestamp().getDayOfMonth()),
+                        TreeMap::new,
+                        Collectors.toCollection(() -> new TreeSet<T>(Comparator.reverseOrder()))
+                ));
+    }
     public Map<Integer, Long> countByYear(){
-        return allStream().collect(Collectors.groupingBy(
-                e -> e.getTimestamp().getYear(),
-                TreeMap::new,
-                Collectors.counting()
-        ));
-    }
-
-
-    public Stream<T> allStream(){
-        return map.values().stream().flatMap(List::stream);
+        return map.values().stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.groupingBy(
+                        el -> el.getTimestamp().getYear(),
+                        TreeMap::new,
+                        Collectors.counting()
+                ));
     }
 }
+
 interface IHasTimestamp {
     LocalDateTime getTimestamp();
 }

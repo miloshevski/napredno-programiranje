@@ -1,14 +1,14 @@
 package k1.metetostanica;
-
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
+import java.util.Iterator;
+import java.util.Random;
 import java.util.Scanner;
-import java.util.stream.Collectors;
+import java.util.Set;
+import java.util.TreeSet;
 
 public class WeatherStationTest {
     public static void main(String[] args) throws ParseException {
@@ -43,16 +43,87 @@ public class WeatherStationTest {
             System.out.println(e);
         }
     }
+
+    static void generate() {
+        Calendar cal = Calendar.getInstance();
+        cal.set(2013, 11, 15, 0, 0);
+        Date from = cal.getTime();
+        cal.set(2013, 11, 18, 0, 0);
+        Date to = cal.getTime();
+        long f = from.getTime();
+        long t = to.getTime();
+        Random r = new Random();
+
+        for (long i = f; i <= t; i += 60000 * 5) {
+            double temperature = (r.nextGaussian() + 2) * 10;
+            double wind = r.nextDouble() * 50;
+            double humidity = r.nextDouble() * 100;
+            double visibility = r.nextDouble() * 200;
+            Date date = new Date(i);
+            DateFormat df = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+            System.out.printf("%.1f %.1f %.1f %.1f\n%s\n", temperature, wind,
+                    humidity, visibility, df.format(date));
+        }
+    }
 }
 
-class Measurement implements Comparable<Measurement>{
-    private final float temperature;
-    private final float wind;
-    private final float humidity;
-    private final float visibility;
-    private final Date date;
+class WeatherStation {
+    private Set<Measurment> measurments;
+    private int days;
 
-    public Measurement(float temperature, float wind, float humidity, float visibility, Date date) {
+    public WeatherStation(int days) {
+        this.days = days;
+        measurments = new TreeSet<Measurment>();
+    }
+
+    public void addMeasurment(float temperature, float wind, float humidity,
+                              float visibility, Date date) {
+        Measurment measurment = new Measurment(temperature, wind, humidity,
+                visibility, date);
+        long time = measurment.getDate().getTime();
+        Iterator<Measurment> iterator = measurments.iterator();
+        if (iterator.hasNext()) {
+            Measurment m = iterator.next();
+            long d = time - m.getDate().getTime();
+            if (d > days * 24 * 60 * 60 * 1000) {
+                iterator.remove();
+            }
+        }
+        measurments.add(measurment);
+    }
+
+    public void status(Date from, Date to) {
+        Iterator<Measurment> iterator = measurments.iterator();
+        float tempSum = 0;
+        int n = 0;
+        while (iterator.hasNext()) {
+            Measurment m = iterator.next();
+            if (m.getDate().compareTo(from) >= 0&&m.getDate().compareTo(to) <= 0) {
+                System.out.println(m);
+                tempSum += m.getTemperature();
+                ++n;
+            }
+        }
+        if (n == 0) {
+            throw new RuntimeException();
+        }
+        System.out.printf("Average temperature: %.2f\n", tempSum / n);
+    }
+
+    public int total() {
+        return measurments.size();
+    }
+}
+
+class Measurment implements Comparable<Measurment> {
+    private float temperature;
+    private float wind;
+    private float humidity;
+    private float visibility;
+    private Date date;
+
+    public Measurment(float temperature, float wind, float humidity,
+                      float visibility, Date date) {
         this.temperature = temperature;
         this.wind = wind;
         this.humidity = humidity;
@@ -61,79 +132,26 @@ class Measurement implements Comparable<Measurement>{
     }
 
     @Override
-    public String toString() {
-        return String.format("%.1f %.1f km/h %.1f%% %.1f km %s", temperature, wind, humidity, visibility, date.toString());
+    public int compareTo(Measurment o) {
+        long t1 = this.date.getTime();
+        long t2 = o.date.getTime();
+        if (Math.abs(t1 - t2) < 150 * 1000) {
+            return 0;
+        }
+        return this.date.compareTo(o.date);
     }
 
-    @Override
-    public int compareTo(Measurement o) {
-        if(Math.abs(date.getTime() - o.date.getTime()) < 150000){
-            return 0;
-        }else{
-            return date.compareTo(o.date);
-        }
-    }
-    public Date getDate(){
+    public Date getDate() {
         return date;
     }
-    public float getTemperature(){
+
+    public float getTemperature() {
         return temperature;
     }
 
-}
-
-class WeatherStation{
-    private final int n;
-    private final List<Measurement> list;
-    public static final long MS = 86400000;
-
-    public WeatherStation(int n) {
-        this.n = n;
-        list = new ArrayList<Measurement>();
+    @Override
+    public String toString() {
+        return String.format("%.1f %.1f km/h %.1f%% %.1f km %s", temperature,
+                wind, humidity, visibility, date);
     }
-
-    public void addMeasurment(float temperature, float wind, float humidity, float visibility, Date date) {
-        Measurement m = new Measurement(temperature, wind, humidity, visibility, date);
-
-        // ignore if within 2.5 minutes of any existing measurement
-        for (Measurement mea : list) {
-            if (mea.compareTo(m) == 0) {   // <-- compare to the NEW measurement!
-                return;
-            }
-        }
-
-        // keep only last n days relative to the NEW measurement
-        list.removeIf(i -> m.getDate().getTime() - i.getDate().getTime() > n * MS);
-
-        // finally add the new measurement
-        list.add(m);
-    }
-
-
-    public int total(){
-        return list.size();
-    }
-
-    public void status(Date from, Date to) {
-        List<Measurement> newList = list.stream()
-                .filter(i -> (i.getDate().after(from) || i.getDate().equals(from)) &&
-                        (i.getDate().before(to)  || i.getDate().equals(to)))
-                .sorted((a, b) -> a.getDate().compareTo(b.getDate())) // sort ascending
-                .collect(Collectors.toList());
-
-        if (newList.isEmpty()) {
-            throw new RuntimeException();
-        }
-
-        double avg = newList.stream()
-                .mapToDouble(Measurement::getTemperature)
-                .average()
-                .getAsDouble();
-
-        for (Measurement m : newList) {
-            System.out.println(m.toString());
-        }
-        System.out.printf("Average temperature: %.2f", avg);
-    }
-
 }

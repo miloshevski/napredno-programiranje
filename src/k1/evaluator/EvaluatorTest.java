@@ -6,31 +6,29 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 interface IEvaluator<T extends Comparable<T>>{
-    boolean evaluate (T a, T b);
+    boolean evaluate(T a, T b);
 }
-
-class EvaluatorBuilder<T> {
-    public static <T extends Comparable<T>> IEvaluator<T> build(String operator){
-        if (operator.equals(">")) {
-            return (a,b) -> a.compareTo(b) > 0;
-        }else if(operator.equals("<")){
-            return (a,b) -> a.compareTo(b) < 0;
-        }else if(operator.equals("==")){
-            return (a,b) -> a.compareTo(b) == 0;
-        }else if(operator.equals("!=")){
-            return (a,b) -> a.compareTo(b) != 0;
-        }else{
-            return (a,b) -> false;
+class EvaluatorBuilder{
+    static <T extends Comparable<T>> IEvaluator<T> build(String operator){
+        switch (operator){
+            case "==":
+                return (l,r) -> l.compareTo(r) == 0;
+            case "<":
+                return (l,r) -> l.compareTo(r) < 0;
+            case ">":
+                return (l,r) -> l.compareTo(r) > 0;
+            case "!=":
+                return (l,r) -> l.compareTo(r) != 0;
+            default:
+                return (l,r) -> false;
         }
     }
-
 }
 
 class Evaluator{
-    public static <T extends Comparable<T>> boolean evaluateExpression(T left, T right, String operator){
-        IEvaluator<T> e = EvaluatorBuilder.build(operator);
-
-        return e.evaluate(left, right);
+    static <T extends Comparable<T>>boolean evaluateExpression(T left, T right, String operator){
+        IEvaluator<T> evaluator = EvaluatorBuilder.build(operator);
+        return evaluator.evaluate(left,right);
     }
 }
 

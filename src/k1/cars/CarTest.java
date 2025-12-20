@@ -3,25 +3,17 @@ package k1.cars;
 import java.util.*;
 import java.util.stream.Collectors;
 
-class Car implements Comparable<Car>{
-    private String manufacturer;
+class Car{
+    private String manufacturee;
     private String model;
     private int price;
     private float power;
 
-    public Car(String manufacturer, String model, int price, float power) {
-        this.manufacturer = manufacturer;
+    public Car(String manufacturee, String model, int price, float power) {
+        this.manufacturee = manufacturee;
         this.model = model;
         this.price = price;
         this.power = power;
-    }
-
-    public String getManufacturer() {
-        return manufacturer;
-    }
-
-    public String getModel() {
-        return model;
     }
 
     public int getPrice() {
@@ -32,41 +24,42 @@ class Car implements Comparable<Car>{
         return power;
     }
 
-    @Override
-    public int compareTo(Car o) {
-        return Comparator.comparing(Car::getPrice).thenComparing(Car::getPower).compare(this,o);
+    public String getManufacturee() {
+        return manufacturee;
+    }
+
+    public String getModel() {
+        return model;
     }
 
     @Override
     public String toString() {
-        return String.format("%s %s (%fKW) %d",manufacturer,model,power,price);
+        return String.format("%s %s (%.0fKW) %d",manufacturee,model,power,price);
     }
 }
 
 class CarCollection{
     private List<Car> list;
-    public CarCollection(){
+
+    public CarCollection() {
         list = new ArrayList<>();
     }
 
-    public void  addCar(Car car){
+    public void addCar(Car car){
         list.add(car);
     }
 
     public void sortByPrice(boolean ascending){
         if(ascending){
-            list = list.stream().sorted().collect(Collectors.toList());
-        }else{
-            list = list.stream()
-                    .sorted(Comparator.reverseOrder())
-                    .collect(Collectors.toList());
+            list = list.stream().sorted(Comparator.comparingInt(Car::getPrice).thenComparing(Car::getPower)).collect(Collectors.toList());
+            return;
         }
-    }
+        list = list.stream().sorted(Comparator.comparingInt(Car::getPrice).thenComparing(Car::getPower).reversed()).collect(Collectors.toList());
 
+    }
     public List<Car> filterByManufacturer(String manufacturer){
-        return list.stream().filter(i -> i.getManufacturer().equalsIgnoreCase(manufacturer)).sorted(Comparator.comparing(Car::getModel)).collect(Collectors.toList());
+        return list.stream().filter(c -> c.getManufacturee().toLowerCase().equals(manufacturer.toLowerCase())).sorted(Comparator.comparing(Car::getModel)).collect(Collectors.toList());
     }
-
     public List<Car> getList(){
         return list;
     }
@@ -109,4 +102,4 @@ public class CarTest {
 }
 
 
-// vashiot kod ovde
+// vashiot kod ovdet kod ovde

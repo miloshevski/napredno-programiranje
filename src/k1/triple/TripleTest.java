@@ -1,34 +1,32 @@
 package k1.triple;
-
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
-import java.util.stream.Collectors;
 
 class Triple<T extends Number>{
     private List<T> list;
 
-    public Triple(T n1, T n2, T n3) {
+    public Triple(T a, T b, T c) {
         list = new ArrayList<>();
-        list.add(n1);
-        list.add(n2);
-        list.add(n3);
+        list.add(a);
+        list.add(b);
+        list.add(c);
     }
 
-    public double max(){
-        return list.stream().mapToDouble(Number::doubleValue).max().getAsDouble();
+    double max(){
+        return list.stream().mapToDouble(T::doubleValue).max().orElse(0.0);
     }
-
-    public double avarage(){
-        return list.stream().mapToDouble(Number::doubleValue).sum() / list.size();
+    double avarage(){
+        return list.stream().mapToDouble(T::doubleValue).average().orElse(0.0);
     }
-    public void sort(){
-        list = list.stream().sorted().collect(Collectors.toList());
+    void sort(){
+        list.sort(Comparator.comparingDouble(T::doubleValue));
     }
 
     @Override
     public String toString() {
-        return String.format("%.2f %.2f %.2f", list.get(0).doubleValue(), list.get(1).doubleValue(), list.get(2).doubleValue());
+        return String.format("%.2f %.2f %.2f",list.get(0).doubleValue(),list.get(1).doubleValue(),list.get(2).doubleValue());
     }
 }
 
