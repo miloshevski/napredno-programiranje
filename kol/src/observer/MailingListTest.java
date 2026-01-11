@@ -8,22 +8,28 @@ import java.util.List;
 import java.util.Map;
 
 interface User{
-    void notify(String mailingListName, String text);
+    void notify(String mailingListName,String text);
+}
+
+interface MailingList{
+    void subscribe(User user);
+    void unsubscribe(User user);
+    void publish(String text);
 }
 
 abstract class AbstractUser implements User{
-    protected final String name;
-    protected final String email;
+    protected String name;
+    private String email;
 
-    AbstractUser(String name, String email) {
+    public AbstractUser(String name, String email) {
         this.name = name;
         this.email = email;
     }
 }
 
-class MailingListUser extends AbstractUser{
+class MailingListUser extends AbstractUser implements User{
 
-    MailingListUser(String name, String email) {
+    public MailingListUser(String name, String email) {
         super(name, email);
     }
 
@@ -33,69 +39,73 @@ class MailingListUser extends AbstractUser{
     }
 }
 
-class FilteredMailingListUser extends AbstractUser{
+class FilteredMailingListUser extends AbstractUser implements User{
+    private String word;
 
-    private final String keyword;
-
-    public FilteredMailingListUser(String name, String email, String keyword) {
+    public FilteredMailingListUser(String name, String email, String word) {
         super(name, email);
-        this.keyword = keyword;
+        this.word = word;
+    }
+
+    private boolean filteredText(String text){
+        return text.toLowerCase().contains(word.toLowerCase());
     }
 
     @Override
     public void notify(String mailingListName, String text) {
-        if(text.toLowerCase().contains(keyword)){
+        if(filteredText(text)){
             System.out.printf("[FILTERED USER] %s received filtered email from %s: %s%n",name,mailingListName,text);
         }
     }
 }
 
-class AdminUser extends AbstractUser{
+class AdminUser extends AbstractUser implements User{
 
-    AdminUser(String name, String email) {
+    public AdminUser(String name, String email) {
         super(name, email);
     }
 
     @Override
     public void notify(String mailingListName, String text) {
         System.out.printf("[ADMIN LOG] MailingList=%s | Message=%s%n",mailingListName,text);
-
     }
 }
 
-interface MailingList{
-    void subscribe(User u);
-    void unsubscribe(User u);
-    void publish(String text);
+abstract class AbstractMailingList implements MailingList{
+    protected String email;
+    protected List<User> users;
+
+    public AbstractMailingList(String email) {
+        this.email = email;
+        this.users = new ArrayList<>();
+    }
 }
 
-class SimpleMailingList implements MailingList{
-    private final String name;
-    private List<User> subscribers;
+class SimpleMailingList extends AbstractMailingList implements MailingList{
 
-    SimpleMailingList(String name) {
-        this.name = name;
-        subscribers = new ArrayList<>();
-    }
-
-
-    @Override
-    public void subscribe(User u) {
-        subscribers.add(u);
+    public SimpleMailingList(String email) {
+        super(email);
     }
 
     @Override
-    public void unsubscribe(User u) {
-        subscribers.remove(u);
+    public void subscribe(User user) {
+        users.add(user);
+    }
+
+    @Override
+    public void unsubscribe(User user) {
+        users.remove(user);
     }
 
     @Override
     public void publish(String text) {
-        for(User u : subscribers){
-            u.notify(name,text);
+        for(User u : users){
+            u.notify(email,text);
         }
     }
 }
+
+
 
 public class MailingListTest {
     public static void main(String[] args) throws Exception {
@@ -162,4 +172,3 @@ public class MailingListTest {
         }
     }
 }
-
